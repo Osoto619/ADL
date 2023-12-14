@@ -97,6 +97,55 @@ def get_resident_count():
     return c.fetchone()[0]
 
 
+def fetch_residents():
+    """ Fetches a list of resident names from the database. """
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT name FROM residents')
+        return [row[0] for row in cursor.fetchall()]
+
+def remove_resident(resident_name):
+    """ Removes a resident from the database. """
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM residents WHERE name = ?', (resident_name,))
+        conn.commit()
+
+
+def enter_resident_removal():
+    # Fetch the list of residents for the dropdown
+    residents = fetch_residents()
+
+    # Define the layout for the removal window
+    layout = [
+        [sg.Text('Warning: Removing a resident is irreversible.', text_color='red')],
+        [sg.Text('Please ensure you have saved any required data before proceeding.')],
+        [sg.Text('Select a resident to remove:'), sg.Combo(residents, key='-RESIDENT-')],
+        [sg.Button('Remove Resident'), sg.Button('Cancel')]
+    ]
+
+    # Create the removal window
+    window = sg.Window('Remove Resident', layout)
+
+    # Event loop for the removal window
+    while True:
+        event, values = window.read()
+        if event == sg.WIN_CLOSED or event == 'Cancel':
+            break
+        elif event == 'Remove Resident':
+            # Confirm the removal
+            resident_to_remove = values['-RESIDENT-']
+            if resident_to_remove:  # Proceed only if a resident is selected
+                confirm = sg.popup_yes_no('Are you sure you want to remove this resident? This action cannot be undone.')
+                if confirm == 'Yes':
+                    remove_resident(resident_to_remove)
+                    sg.popup(f'Resident {resident_to_remove} has been removed.')
+                    window.close()
+                    break
+
+    window.close()
+
+
 def display_welcome_window(num_of_residents_local):
     """ Display a welcome window with the number of residents. """
     image_path = 'ct-logo.png'
@@ -107,7 +156,7 @@ def display_welcome_window(num_of_residents_local):
         [sg.Text(f'Your Facility Currently has {num_of_residents_local} Resident(s)',
                  font=("Helvetica", 14), justification='center')],
         [sg.Button('Enter ADL Management'),
-         sg.Button('Add Resident')]
+         sg.Button('Add Resident', button_color='green'), sg.Button('Remove Resident', button_color='red')]
     ]
 
     window = sg.Window('CareTech ADL Manager', layout, element_justification='c')
@@ -120,7 +169,8 @@ def display_welcome_window(num_of_residents_local):
             window.close()
             enter_resident_info()
             break
-
+        elif event == 'Remove Resident':
+            enter_resident_removal()
         elif event == 'Enter ADL Management':
             window.close()
             management.create_adl_management_window()
@@ -133,10 +183,9 @@ def display_welcome_window(num_of_residents_local):
 # Main execution
 while True:
     # Check for existing resident data and display the welcome window
-    if display_welcome_window(get_resident_count()):
-        continue  # If a new resident was added, refresh the welcome window
-    else:
-        break  # Exit the loop if the window was closed without adding a new resident
+    if not display_welcome_window(get_resident_count()):
+        break  # If a new resident was added, refresh the welcome window
+    
 
 
 # Close DB connection

@@ -163,42 +163,71 @@ def does_chart_data_exist(resident_name, year_month):
         return cursor.fetchone()[0]
 
 
+def get_resident_self_care_status():
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT name, self_care FROM residents')
+        return {name: self_care for name, self_care in cursor.fetchall()}
+
+
 def create_adl_management_window():
     resident_names_local = get_resident_names()
+    resident_self_care_status = get_resident_self_care_status()
+
     # Create tabs for each resident
     resident_tabs = []
     for name in resident_names_local:
         existing_data = fetch_adl_data_for_resident(name)
+        is_self_care = resident_self_care_status.get(name, False)
+
+        # Fields to auto-populate for self-care residents
+        auto_self_fields = [
+            'first_shift_bm', 'second_shift_bm', 'shower', 'shampoo',
+            'sponge_bath', 'peri_care_am', 'peri_care_pm', 'oral_care_am',
+            'oral_care_pm', 'nail_care', 'skin_care', 'shave'
+        ]
+
+        # Build the default texts for input fields
+        input_fields_defaults = {field: existing_data.get(field, '') for field in auto_self_fields}
+
+        # Auto-populate 'Self' for self-care residents in the existing fields
+        if is_self_care:
+            for field in auto_self_fields:
+                input_fields_defaults[field] = 'Self'
+
         tab_layout = [
             [sg.Text(f'Service Plan Followed (Initials)')],
-            [sg.Text('1st Shift Service Plan'), sg.InputText(size=3, default_text=existing_data.get('first_shift_sp', ''), key=f'{name}_first_shift_sp'),
-             sg.Text('2nd Shift Service Plan'), sg.InputText(size=3, default_text=existing_data.get('second_shift_sp'), key=f'{name}_second_shift_sp')],
+            [sg.Text('1st Shift Service Plan'), sg.InputText(size=4, default_text=existing_data.get('first_shift_sp', ''), key=f'{name}_first_shift_sp'),
+             sg.Text('2nd Shift Service Plan'), sg.InputText(size=4, default_text=existing_data.get('second_shift_sp'), key=f'{name}_second_shift_sp')],
             [sg.Text("Activities (Use Activities Legend Below)")],
-            [sg.Text('1st Shift 1st Activity'), sg.InputText(size=3, default_text=existing_data.get('first_shift_activity1', ''), key=f'{name}_first_shift_activity1'),
-             sg.Text("1st Shift 2nd Activity"), sg.InputText(size=3, default_text=existing_data.get('first_shift_activity2', ''), key=f'{name}_first_shift_activity2')],
-            [sg.Text('1st Shift 3rd Activity'), sg.InputText(size=3, default_text=existing_data.get('first_shift_activity3', ''), key=f'{name}_first_shift_activity3'),
-             sg.Text("2nd Shift 4th Activity"), sg.InputText(size=3, default_text=existing_data.get('second_shift_activity4', ''), key=f'{name}_second_shift_activity4')],
-            [sg.Text('1st Shift Bowel Movement'), sg.InputText(size=3, default_text=existing_data.get('first_shift_bm', ''), key=f'{name}_first_shift_bm'),
-             sg.Text('2nd Shift Bowel Movement'), sg.InputText(size=3, default_text=existing_data.get('second_shift_bm', ''), key=f'{name}_second_shift_bm')],
+            [sg.Text('1st Shift 1st Activity'), sg.InputText(size=4, default_text=existing_data.get('first_shift_activity1', ''), key=f'{name}_first_shift_activity1'),
+             sg.Text("1st Shift 2nd Activity"), sg.InputText(size=4, default_text=existing_data.get('first_shift_activity2', ''), key=f'{name}_first_shift_activity2')],
+            [sg.Text('1st Shift 3rd Activity'), sg.InputText(size=4, default_text=existing_data.get('first_shift_activity3', ''), key=f'{name}_first_shift_activity3'),
+             sg.Text("2nd Shift 4th Activity"), sg.InputText(size=4, default_text=existing_data.get('second_shift_activity4', ''), key=f'{name}_second_shift_activity4')],
+            [sg.Text('1st Shift Bowel Movement'), sg.InputText(size=4, default_text=input_fields_defaults['first_shift_bm'], key=f'{name}_first_shift_bm'),
+             sg.Text('2nd Shift Bowel Movement'), sg.InputText(size=4, default_text=input_fields_defaults['second_shift_bm'], key=f'{name}_second_shift_bm')],
             [sg.Text("ADL's (initial when complete)")],
-            [sg.Text('Shower'), sg.InputText(size=3, default_text=existing_data.get('shower', ''), key=f'{name}_shower'),
-             sg.Text('Shampoo'), sg.InputText(size=3, default_text=existing_data.get('shampoo', ''), key=f'{name}_shampoo'),
-             sg.Text('Sponge Bath'), sg.InputText(size=3, default_text=existing_data.get('sponge_bath', ''), key=f'{name}_sponge_bath'),
-             sg.Text('Peri Care AM'), sg.InputText(size=3, default_text=existing_data.get('peri_care_am', ''), key=f'{name}_peri_care_am'),
-             sg.Text('Peri Care PM'), sg.InputText(size=3, default_text=existing_data.get('peri_care_pm', ''), key=f'{name}_peri_care_pm')],
-            [sg.Text('Oral Care AM'), sg.InputText(size=3, default_text=existing_data.get('oral_care_am', ''), key=f'{name}_oral_care_am'),
-             sg.Text('Oral Care PM'), sg.InputText(size=3, default_text=existing_data.get('oral_care_pm', ''), key=f'{name}_oral_care_pm'),
-             sg.Text('Nail Care'), sg.InputText(size=3, default_text=existing_data.get('nail_care', ''), key=f'{name}_nail_care'),
-             sg.Text('Skin Care'), sg.InputText(size=3, default_text=existing_data.get('skin_care'), key=f'{name}_skin_care'),
-             sg.Text('Shave'), sg.InputText(size=3, default_text=existing_data.get('shave', ''), key=f'{name}_shave')],
+            [sg.Text('Shower'), sg.InputText(size=4, default_text=input_fields_defaults['shower'], key=f'{name}_shower'),
+             sg.Text('Shampoo'), sg.InputText(size=4, default_text=input_fields_defaults['shampoo'], key=f'{name}_shampoo'),
+             sg.Text('Sponge Bath'), sg.InputText(size=4, default_text=input_fields_defaults['sponge_bath'], key=f'{name}_sponge_bath'),
+             sg.Text('Peri Care AM'), sg.InputText(size=4, default_text=input_fields_defaults['peri_care_am'], key=f'{name}_peri_care_am'),
+             sg.Text('Peri Care PM'), sg.InputText(size=4, default_text=input_fields_defaults['peri_care_pm'], key=f'{name}_peri_care_pm')],
+            [sg.Text('Oral Care AM'), sg.InputText(size=4, default_text=input_fields_defaults['oral_care_am'], key=f'{name}_oral_care_am'),
+             sg.Text('Oral Care PM'), sg.InputText(size=4, default_text=input_fields_defaults['oral_care_pm'], key=f'{name}_oral_care_pm'),
+             sg.Text('Nail Care'), sg.InputText(size=4, default_text=input_fields_defaults['nail_care'], key=f'{name}_nail_care'),
+             sg.Text('Skin Care'), sg.InputText(size=4, default_text=input_fields_defaults['skin_care'], key=f'{name}_skin_care'),
+             sg.Text('Shave'), sg.InputText(size=4, default_text=input_fields_defaults['shave'], key=f'{name}_shave')],
             [sg.Text('Meals (Record Percentage of Meal Eaten)')],
-            [sg.Text('Breakfast'), sg.InputText(size=3, default_text=existing_data.get('breakfast', ''), key=f'{name}_breakfast'),
-             sg.Text('Lunch'), sg.InputText(size=3, default_text=existing_data.get('lunch', ''), key=f'{name}_lunch'),
-             sg.Text('Dinner'), sg.InputText(size=3, default_text=existing_data.get('dinner', ''), key=f'{name}_dinner'),
-             sg.Text('Snack AM'), sg.InputText(size=3, default_text=existing_data.get('snack_am', ''), key=f'{name}_snack_am'),
-             sg.Text('Snack PM'), sg.InputText(size=3, default_text=existing_data.get('snack_pm', ''), key=f'{name}_snack_pm'),
-             sg.Text('Water In-Take'), sg.InputText(size=3, default_text=existing_data.get('water_intake', ''), key=f'{name}_water_intake')],
+            [sg.Text('Breakfast'), sg.InputText(size=4, default_text=existing_data.get('breakfast', ''), key=f'{name}_breakfast'),
+             sg.Text('Lunch'), sg.InputText(size=4, default_text=existing_data.get('lunch', ''), key=f'{name}_lunch'),
+             sg.Text('Dinner'), sg.InputText(size=4, default_text=existing_data.get('dinner', ''), key=f'{name}_dinner'),
+             sg.Text('Snack AM'), sg.InputText(size=4, default_text=existing_data.get('snack_am', ''), key=f'{name}_snack_am'),
+             sg.Text('Snack PM'), sg.InputText(size=4, default_text=existing_data.get('snack_pm', ''), key=f'{name}_snack_pm'),
+             sg.Text('Water In-Take'), sg.InputText(size=4, default_text=existing_data.get('water_intake', ''), key=f'{name}_water_intake')],
         ]
+
+       
+
         resident_tabs.append(sg.Tab(name, tab_layout, key=f"TAB_{name}"))
 
     # Create the tab group

@@ -4,6 +4,7 @@ import time
 import sqlite3
 from chart_backup import show_adl_chart
 
+sg.theme('DarkBlue2')
 
 # Define activities
 activities = [
@@ -150,6 +151,18 @@ def fetch_adl_data_for_resident(resident_name):
             return {}
 
 
+def does_chart_data_exist(resident_name, year_month):
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT EXISTS(
+                SELECT 1 FROM adl_chart
+                WHERE resident_name = ? AND strftime('%Y-%m', date) = ?
+            )
+        ''', (resident_name, year_month))
+        return cursor.fetchone()[0]
+
+
 def create_adl_management_window():
     resident_names_local = get_resident_names()
     # Create tabs for each resident
@@ -199,7 +212,10 @@ def create_adl_management_window():
         [sg.Text(text='', expand_x=True),sg.Text(current_date, key='-DATE-', font=('Helvetica', 12)), sg.Text('', key='-TIME-', font=('Helvetica', 12)), sg.Text(text='', expand_x=True)],
         [tab_group],
         [sg.Text(text='', expand_x=True), sg.Button('Previous'), sg.Button('Next'),
-         sg.Button('Save'), sg.Button('Show Resident Chart'), sg.Text(text='', expand_x=True)],
+         sg.Button('Save'), sg.Text(text='', expand_x=True)], [sg.Text(text='', expand_x=True), sg.Button('Current Month ADL Chart'), sg.Text(text='', expand_x=True)],
+         [sg.Text(text="", expand_x=True),sg.Text(text="Or Search By Month And Year"), sg.Text(text="", expand_x=True)],
+        [sg.Text(text="", expand_x=True),sg.Text(text="Enter Month: (MM)"), sg.InputText(size=4, key="month") , sg.Text("Enter Year: (YYYY)"), sg.InputText(size=5, key='year'), 
+         sg.Button("Search"), sg.Text(text="", expand_x=True)],
         [sg.Text(text='', expand_x=True), activities_frame, sg.Text(text='', expand_x=True)]
     ]
 
@@ -214,6 +230,8 @@ def create_adl_management_window():
         elif event == 'Next':
             # Get the key of the currently selected tab
             selected_tab_key = values['-TABGROUP-']
+            if selected_tab_key == None:
+                continue
             # Extract the resident name from the selected tab key
             selected_resident = selected_tab_key.split('_')[1]
             # Get the index of the currently selected resident
@@ -227,6 +245,8 @@ def create_adl_management_window():
             # Get the key of the currently selected tab
             selected_tab_key = values['-TABGROUP-']
             # Extract the resident name from the selected tab key
+            if selected_tab_key == None:
+                continue
             selected_resident = selected_tab_key.split('_')[1]
             # Get the index of the currently selected resident
             selected_tab_index = resident_names_local.index(selected_resident)
@@ -238,15 +258,19 @@ def create_adl_management_window():
         elif event == 'Save':
             # Get the name of the selected tab which corresponds to the selected resident
             selected_tab_key = values['-TABGROUP-']  # Use the key you've assigned to the TabGroup when creating it
+            if selected_tab_key == None:
+                continue
             selected_resident = selected_tab_key.split('_')[1]  # Assuming key format is "TAB_residentname"
             adl_data = retrieve_adl_data_from_window(window, selected_resident)
             # For Testing
             # print("ADL Data to be saved:", adl_data)
             save_adl_data(selected_resident, adl_data)
             sg.popup("Data saved successfully!")
-        elif event == "Show Resident Chart":
+        elif event == "Current Month ADL Chart":
             # Get the name of the selected resident
             selected_tab_key = values['-TABGROUP-']
+            if selected_tab_key == None:
+                continue
             selected_resident = selected_tab_key.split('_')[1]
 
             # Get the current month and year
@@ -254,6 +278,22 @@ def create_adl_management_window():
 
             # Call the show_adl_chart function with the selected resident and current month-year
             show_adl_chart(selected_resident, current_month_year)
+        elif event == "Search":
+            # year_month should be in the format 'YYYY-MM'
+            month = values['month'].zfill(2)
+            year = values['year']
+            month_year = f'{year}-{month}'
+            print(month_year)
+            selected_tab_key = values['-TABGROUP-']
+            if selected_tab_key == None:
+                continue
+            selected_resident = selected_tab_key.split('_')[1]
+            if does_chart_data_exist(selected_resident, month_year):
+                show_adl_chart(selected_resident, month_year)
+            else:
+                sg.popup("No ADL Chart Data Found for the Specified Month and Resident")
+
+
 
         update_clock(window)
 

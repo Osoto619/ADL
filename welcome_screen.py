@@ -3,6 +3,8 @@ import PySimpleGUI as sg
 import management
 
 
+sg.theme('DarkBlue2')
+
 # Connect to SQLite database
 # The database file will be 'resident_data.db'
 conn = sqlite3.connect('resident_data.db')
@@ -48,8 +50,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS adl_chart (
              UNIQUE(resident_name, date))''')
 
 conn.commit()
-
-sg.theme('Black')
 
 
 def check_for_residents():

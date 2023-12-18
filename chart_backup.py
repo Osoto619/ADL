@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import sqlite3
 import calendar
 
-sg.theme('black')
+# sg.theme('black')
 
 # Define the width of the label cell and regular cells
 label_cell_width = 12  # This may need to be adjusted to align perfectly
@@ -82,7 +82,7 @@ def show_adl_chart(resident_name, year_month):
 
     # Define the layout of the window
     layout = [
-        [sg.Text('CareTech Monthly ADLs', font=('Helvetica', 16), justification='center', expand_x=True)],
+        [sg.Text('CareTech Monthly ADL Chart', font=('Helvetica', 16), justification='center', expand_x=True)],
         [sg.Text('RESIDENT:', size=(10, 1)), sg.Text(f'{resident_name}', key='-RESIDENT-', size=(20, 1)),
         sg.Text('MONTH:', size=(10, 1)), sg.Text(f'{month_name} {year}', key='-MONTH-', size=(20, 1))],
         # Table as a header row of cells

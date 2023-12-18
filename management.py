@@ -3,8 +3,8 @@ from datetime import datetime
 import time
 import sqlite3
 from chart_backup import show_adl_chart
+import welcome_screen
 
-sg.theme('DarkBlue2')
 
 # Define activities
 activities = [
@@ -29,7 +29,6 @@ activities = [
 column1 = [[sg.Text(activities[i])] for i in range(0, len(activities), 3)]
 column2 = [[sg.Text(activities[i])] for i in range(1, len(activities), 3)]
 column3 = [[sg.Text(activities[i])] for i in range(2, len(activities), 3)]
-
 # Create a frame with three columns
 activities_frame = sg.Frame('Activities', layout=[
     [sg.Column(column1), sg.Column(column2), sg.Column(column3)]

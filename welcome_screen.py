@@ -3,14 +3,12 @@ import PySimpleGUI as sg
 import management
 
 
-sg.theme('DarkBlue2')
-
 # Connect to SQLite database
 # The database file will be 'resident_data.db'
 conn = sqlite3.connect('resident_data.db')
 c = conn.cursor()
 
-# Create table
+# Create  Resident table
 c.execute('''CREATE TABLE IF NOT EXISTS residents
              (name TEXT,
               age INTEGER,
@@ -49,8 +47,48 @@ c.execute('''CREATE TABLE IF NOT EXISTS adl_chart (
              FOREIGN KEY(resident_name) REFERENCES residents(name),
              UNIQUE(resident_name, date))''')
 
+# Create table for user settings
+c.execute('''CREATE TABLE IF NOT EXISTS user_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_name TEXT UNIQUE,
+    setting_value TEXT)''')
+
 conn.commit()
 
+
+# Function to get the user's saved theme
+def get_user_theme():
+    c.execute("SELECT setting_value FROM user_settings WHERE setting_name = 'theme'")
+    result = c.fetchone()
+    return result[0] if result else 'DarkBlue'  # Replace 'Default1' with your default theme
+
+
+# Function to save theme choice
+def save_user_theme_choice(theme):
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        # Check if the theme setting already exists
+        cursor.execute('SELECT COUNT(*) FROM user_settings WHERE setting_name = "theme"')
+        exists = cursor.fetchone()[0] > 0
+
+        if exists:
+            # Update the existing theme setting
+            cursor.execute('UPDATE user_settings SET setting_value = ? WHERE setting_name = "theme"', (theme,))
+        else:
+            # Insert a new theme setting
+            cursor.execute('INSERT INTO user_settings (setting_name, setting_value) VALUES ("theme", ?)', (theme,))
+
+        conn.commit()
+
+
+
+# Function to load and apply the user's theme
+def apply_user_theme():
+    user_theme = get_user_theme()
+    sg.theme(user_theme)
+
+# Apply user theme at application startup
+apply_user_theme()
 
 def check_for_residents():
     """ Check if there are any residents in the database. """
@@ -146,6 +184,34 @@ def enter_resident_removal():
     window.close()
 
 
+def change_theme_window():
+    # Define the theme options available
+    theme_options = sg.theme_list()
+
+    # Layout for the theme selection window
+    layout = [
+        [sg.Text('Select Theme')],
+        [sg.Combo(theme_options, default_value=sg.theme(), key='-THEME-', readonly=True)],
+        [sg.Button('Ok'), sg.Button('Cancel')]
+    ]
+
+    # Create the theme selection window
+    theme_window = sg.Window('Change Theme', layout)
+
+    # Event loop for the theme window
+    while True:
+        event, values = theme_window.read()
+        if event in (None, 'Cancel'):
+            break
+        elif event == 'Ok':
+            selected_theme = values['-THEME-']
+            sg.theme(values['-THEME-'])
+            save_user_theme_choice(selected_theme)
+            break
+
+    theme_window.close()
+
+
 def display_welcome_window(num_of_residents_local):
     """ Display a welcome window with the number of residents. """
     image_path = 'ct-logo.png'
@@ -156,7 +222,8 @@ def display_welcome_window(num_of_residents_local):
         [sg.Text(f'Your Facility Currently has {num_of_residents_local} Resident(s)',
                  font=("Helvetica", 14), justification='center')],
         [sg.Button('Enter ADL Management'),
-         sg.Button('Add Resident', button_color='green'), sg.Button('Remove Resident', button_color='red')]
+         sg.Button('Add Resident', button_color='green'), sg.Button('Remove Resident', button_color='red')], 
+         [sg.Text(text='', expand_x=True), sg.Button("Change Theme"), sg.Text(text='', expand_x=True)]
     ]
 
     window = sg.Window('CareTech ADL Manager', layout, element_justification='c')
@@ -172,19 +239,29 @@ def display_welcome_window(num_of_residents_local):
         elif event == 'Remove Resident':
             enter_resident_removal()
         elif event == 'Enter ADL Management':
-            window.close()
-            management.create_adl_management_window()
+            print(get_resident_count())
+            if get_resident_count() == 0:
+                sg.popup("Your Facility Has No Residents. Please Select Click Add Resident.")
+                continue
+            else:
+                window.close()
+                management.create_adl_management_window()
             return
+        elif event == 'Change Theme':
+            window.hide()
+            change_theme_window()
+            window.un_hide()
 
     window.close()
     return event
 
 
-# Main execution
-while True:
-    # Check for existing resident data and display the welcome window
-    if not display_welcome_window(get_resident_count()):
-        break  # If a new resident was added, refresh the welcome window
+if __name__ == "__main__":
+    # Main execution
+    while True:
+        # Check for existing resident data and display the welcome window
+        if not display_welcome_window(get_resident_count()):
+            break  # If a new resident was added, refresh the welcome window
     
 
 

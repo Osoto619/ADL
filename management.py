@@ -5,34 +5,34 @@ import sqlite3
 from chart_backup import show_adl_chart
 import welcome_screen
 
+def create_activities_frame():
+    # Define activities
+    activities = [
+        "1. Movie & Snack or TV",
+        "2. Exercise/Walking",
+        "3. Games/Puzzles",
+        "4. Outside/Patio",
+        "5. Arts & Crafts",
+        "6. Music Therapy",
+        "7. Gardening",
+        "8. Listen to Music",
+        "9. Social Hour",
+        "10. Cooking/Baking",
+        "11. Birdwatching",
+        "12. Outing/Excursion",
+        "13. Hospice Visit",
+        "14. Other as Listed on the Service Plan",
+        "15. Social Media"
+        ]
 
-# Define activities
-activities = [
-    "1. Movie & Snack or TV",
-    "2. Exercise/Walking",
-    "3. Games/Puzzles",
-    "4. Outside/Patio",
-    "5. Arts & Crafts",
-    "6. Music Therapy",
-    "7. Gardening",
-    "8. Listen to Music",
-    "9. Social Hour",
-    "10. Cooking/Baking",
-    "11. Birdwatching",
-    "12. Outing/Excursion",
-    "13. Hospice Visit",
-    "14. Other as Listed on the Service Plan",
-    "15. Social Media"
-    ]
-
-# Divide activities into three columns
-column1 = [[sg.Text(activities[i])] for i in range(0, len(activities), 3)]
-column2 = [[sg.Text(activities[i])] for i in range(1, len(activities), 3)]
-column3 = [[sg.Text(activities[i])] for i in range(2, len(activities), 3)]
-# Create a frame with three columns
-activities_frame = sg.Frame('Activities', layout=[
-    [sg.Column(column1), sg.Column(column2), sg.Column(column3)]
-], relief=sg.RELIEF_SUNKEN)
+    # Divide activities into three columns
+    column1 = [[sg.Text(activities[i])] for i in range(0, len(activities), 3)]
+    column2 = [[sg.Text(activities[i])] for i in range(1, len(activities), 3)]
+    column3 = [[sg.Text(activities[i])] for i in range(2, len(activities), 3)]
+    # Create a frame with three columns
+    return sg.Frame('Activities', layout=[
+        [sg.Column(column1), sg.Column(column2), sg.Column(column3)]
+    ], relief=sg.RELIEF_SUNKEN)
 
 
 def update_clock(window):
@@ -173,6 +173,8 @@ def create_adl_management_window():
     resident_names_local = get_resident_names()
     resident_self_care_status = get_resident_self_care_status()
 
+    activities_frame = create_activities_frame()
+
     # Create tabs for each resident
     resident_tabs = []
     for name in resident_names_local:
@@ -254,6 +256,8 @@ def create_adl_management_window():
     while True:
         event, values = window.read(timeout=1000)
         if event in (None, 'Exit', sg.WIN_CLOSED):
+            window.close()
+            welcome_screen.display_welcome_window(welcome_screen.get_resident_count())
             break
         elif event == 'Next':
             # Get the key of the currently selected tab

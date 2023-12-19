@@ -81,7 +81,6 @@ def save_user_theme_choice(theme):
         conn.commit()
 
 
-
 # Function to load and apply the user's theme
 def apply_user_theme():
     user_theme = get_user_theme()
@@ -109,7 +108,7 @@ def enter_resident_info():
         [sg.Text('Name', size=(15, 1)), sg.InputText(key='Name')],
         [sg.Text('Age', size=(15, 1)), sg.InputText(key='Age')],
         [sg.Text('Additional Info', size=(15, 1)), sg.InputText(key='Additional_Info')],
-        [sg.Checkbox('Personal Level of Care', key='Self_Care')],
+        [sg.Checkbox('Supervisory Level of Care', key='Self_Care')],
         [sg.Submit(), sg.Cancel()]
     ]
 
@@ -118,6 +117,7 @@ def enter_resident_info():
     while True:
         event, values = window.read()
         if event in (None, 'Cancel'):
+            display_welcome_window(get_resident_count())
             break
         elif event == 'Submit':
             insert_resident(values['Name'], values['Age'], values['Additional_Info'], values['Self_Care'])
@@ -131,8 +131,10 @@ def enter_resident_info():
 
 def get_resident_count():
     """ Return the number of residents in the database. """
-    c.execute('SELECT COUNT(*) FROM residents')
-    return c.fetchone()[0]
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM residents')
+        return cursor.fetchone()[0]
 
 
 def fetch_residents():
@@ -202,11 +204,15 @@ def change_theme_window():
     while True:
         event, values = theme_window.read()
         if event in (None, 'Cancel'):
+            theme_window.close()
+            display_welcome_window(get_resident_count())
             break
         elif event == 'Ok':
             selected_theme = values['-THEME-']
             sg.theme(values['-THEME-'])
             save_user_theme_choice(selected_theme)
+            theme_window.close()
+            display_welcome_window(get_resident_count())
             break
 
     theme_window.close()
@@ -239,7 +245,6 @@ def display_welcome_window(num_of_residents_local):
         elif event == 'Remove Resident':
             enter_resident_removal()
         elif event == 'Enter ADL Management':
-            print(get_resident_count())
             if get_resident_count() == 0:
                 sg.popup("Your Facility Has No Residents. Please Select Click Add Resident.")
                 continue
@@ -248,9 +253,9 @@ def display_welcome_window(num_of_residents_local):
                 management.create_adl_management_window()
             return
         elif event == 'Change Theme':
-            window.hide()
+            window.close()
             change_theme_window()
-            window.un_hide()
+            
 
     window.close()
     return event

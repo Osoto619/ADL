@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import sqlite3
 import calendar
+import datetime
 
 # sg.theme('black')
 
@@ -10,6 +11,13 @@ regular_cell_width = 5  # This may need to be adjusted to align perfectly
 
 # Define the number of days
 num_days = 31
+
+ADL_KEYS = [
+                "first_shift_sp", "second_shift_sp", "first_shift_activity1", "first_shift_activity2",
+                "first_shift_activity3", "second_shift_activity4", "first_shift_bm", "second_shift_bm",
+                "shower", "shampoo", "sponge_bath", "peri_care_am", "peri_care_pm", "oral_care_am", "oral_care_pm",
+                "nail_care", "skin_care", "shave", "breakfast", "lunch", "dinner", "snack_am",
+                "snack_pm", "water_intake"]
 
 
 def create_horizontal_bar(text):
@@ -36,6 +44,45 @@ def fetch_adl_chart_data_for_month(resident_name, year_month):
         return cursor.fetchall()
 
 
+def save_adl_chart_data(resident_name, year_month, window_values):
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        
+        # Loop over each day of the month
+        for day in range(1, num_days + 1):
+            # Extract values for each ADL key for the day
+            adl_data = [window_values[f'-{key}-{day}-'] for key in ADL_KEYS]
+            
+            # Construct the date string for the specific day
+            date_str = f"{year_month}-{str(day).zfill(2)}"
+            
+            # Prepare the SQL statement
+            sql = '''
+                INSERT INTO adl_chart (resident_name, date, first_shift_sp, second_shift_sp, 
+                first_shift_activity1, first_shift_activity2, first_shift_activity3, second_shift_activity4, 
+                first_shift_bm, second_shift_bm, shower, shampoo, sponge_bath, peri_care_am, 
+                peri_care_pm, oral_care_am, oral_care_pm, nail_care, skin_care, shave, 
+                breakfast, lunch, dinner, snack_am, snack_pm, water_intake)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(resident_name, date) DO UPDATE SET
+                first_shift_sp = excluded.first_shift_sp, second_shift_sp = excluded.second_shift_sp, 
+                first_shift_activity1 = excluded.first_shift_activity1, first_shift_activity2 = excluded.first_shift_activity2,
+                first_shift_activity3 = excluded.first_shift_activity3, second_shift_activity4 = excluded.second_shift_activity4,
+                first_shift_bm = excluded.first_shift_bm, second_shift_bm = excluded.second_shift_bm, shower = excluded.shower,
+                shampoo = excluded.shampoo,sponge_bath = excluded.sponge_bath, peri_care_am = excluded.peri_care_am, 
+                peri_care_pm = excluded.peri_care_pm, oral_care_am = excluded.oral_care_am, oral_care_pm = excluded.oral_care_pm,
+                nail_care = excluded.nail_care, skin_care = excluded.skin_care, shave = excluded.shave, breakfast = excluded.breakfast,
+                lunch = excluded.lunch, dinner = excluded.dinner, snack_am = excluded.snack_am, snack_pm = excluded.snack_pm,
+                water_intake = excluded.water_intake
+            '''
+            
+            # Execute the SQL statement
+            cursor.execute(sql, (resident_name, date_str, *adl_data))
+            
+        # Commit the changes to the database
+        conn.commit()
+
+
 def show_adl_chart(resident_name, year_month):
     # Define the number of days
     num_days = 31
@@ -60,8 +107,7 @@ def show_adl_chart(resident_name, year_month):
         "12. Outing/Excursion",
         "13. Hospice Visit",
         "14. Other as Listed on the Service Plan",
-        "15. Social Media"
-    ]
+        "15. Social Media"]
 
     # Divide activities into three columns
     column1 = [[sg.Text(activities[i])] for i in range(0, len(activities), 3)]
@@ -100,58 +146,58 @@ def show_adl_chart(resident_name, year_month):
               hide_vertical_scroll=True)],
         create_horizontal_bar("Service Plan (initial when completed)"),
         create_row_label("1st Shift") +
-        create_input_text("1ST_SHIFT_SP"),
+        create_input_text("first_shift_sp"),
         create_row_label("2nd Shift") +
-        create_input_text("2ND_SHIFT_SP"),
+        create_input_text("second_shift_sp"),
         create_horizontal_bar("Activity Record Number (see legend at bottom)"),
         create_row_label("1st Shift") +
-        create_input_text("1ST_SHIFT_ACTIVITY1"),
+        create_input_text("first_shift_activity1"),
         create_row_label("1st Shift") +
-        create_input_text("1ST_SHIFT_ACTIVITY2"),
+        create_input_text("first_shift_activity2"),
         create_row_label("1st Shift") +
-        create_input_text("1ST_SHIFT_ACTIVITY3"),
+        create_input_text("first_shift_activity3"),
         create_row_label("2nd Shift") +
-        create_input_text("2ND_SHIFT_ACTIVITY4"),
+        create_input_text("second_shift_activity4"),
         create_horizontal_bar("Bowel Movement Record size of BM and how many if more than one (Example: S, M, L, XL, or D for diarrhea)"),
         create_row_label("1st Shift") +
-        create_input_text("1ST_SHIFT_BM"),
+        create_input_text("first_shift_bm"),
         create_row_label("2nd Shift") +
-        create_input_text("2ND_SHIFT_BM"),
+        create_input_text("second_shift_bm"),
         create_horizontal_bar("ADL's (initial when complete)"),
         create_row_label("SHOWER") +
-        create_input_text("SHOWER"),
+        create_input_text("shower"),
         create_row_label("SHAMPOO") +
-        create_input_text("SHAMPOO"),
+        create_input_text("shampoo"),
         create_row_label("SPONGE BATH") +
-        create_input_text("SPONGE"),
+        create_input_text("sponge_bath"),
         create_row_label("PERI CARE AM") +
-        create_input_text("PERI_AM"),
+        create_input_text("peri_care_am"),
         create_row_label("PERI CARE PM") +
-        create_input_text("PERI_PM"),
+        create_input_text("peri_care_pm"),
         create_row_label("ORAL CARE AM") +
-        create_input_text("ORAL_CARE_AM"),
+        create_input_text("oral_care_am"),
         create_row_label("ORAL CARE PM") +
-        create_input_text("ORAL_CARE_PM"),
+        create_input_text("oral_care_pm"),
         create_row_label("NAIL CARE") +
-        create_input_text("NAIL_CARE"),
+        create_input_text("nail_care"),
         create_row_label("SKIN CARE") +
-        create_input_text("SKIN_CARE"),
+        create_input_text("skin_care"),
         create_row_label("SHAVE") +
-        create_input_text("SHAVE"),
+        create_input_text("shave"),
         create_horizontal_bar("Meals (Record Percentage of Meal Eaten)"),
         create_row_label("BREAKFAST") +
-        create_input_text("BREAKFAST"),
+        create_input_text("breakfast"),
         create_row_label("LUNCH") +
-        create_input_text("LUNCH"),
+        create_input_text("lunch"),
         create_row_label("DINNER") +
-        create_input_text("DINNER"),
+        create_input_text("dinner"),
         create_row_label("SNACK AM") +
-        create_input_text("SNACK_AM"),
+        create_input_text("snack_am"),
         create_row_label("SNACK PM") +
-        create_input_text("SNACK_PM"),
+        create_input_text("snack_pm"),
         create_row_label("WATER IN-TAKE") +
-        create_input_text("WATER"),
-        [sg.Text(text='', expand_x=True), activities_frame, sg.Text(text='', expand_x=True)]
+        create_input_text("water_intake"),
+        [sg.Text(text='', expand_x=True), [sg.Button('Save Changes Made'), sg.Button('Hide Buttons')], activities_frame, sg.Text(text='', expand_x=True)]
     ]
 
     # Create the window
@@ -165,16 +211,9 @@ def show_adl_chart(resident_name, year_month):
             chart_id, resident, date, *values = entry  # Unpack each tuple
             day_number = int(date.split('-')[2])  # Extract day number from date
 
-            adl_keys = [
-                "1ST_SHIFT_SP", "2ND_SHIFT_SP", "1ST_SHIFT_ACTIVITY1", "1ST_SHIFT_ACTIVITY2",
-                "1ST_SHIFT_ACTIVITY3", "2ND_SHIFT_ACTIVITY4", "1ST_SHIFT_BM", "2ND_SHIFT_BM",
-                "SHOWER", "SHAMPOO", "SPONGE", "PERI_AM", "PERI_PM", "ORAL_CARE_AM", "ORAL_CARE_PM",
-                "NAIL_CARE", "SKIN_CARE", "SHAVE", "BREAKFAST", "LUNCH", "DINNER", "SNACK_AM",
-                "SNACK_PM", "WATER"
-                # ... list all the keys in the same order as they are in the database ...
-            ]
+            ADL_KEYS
 
-            for adl_key, value in zip(adl_keys, values):
+            for adl_key, value in zip(ADL_KEYS, values):
                 if value:  # Check if there is a value to update
                     window[f'-{adl_key}-{day_number}-'].update(value)
 
@@ -183,6 +222,12 @@ def show_adl_chart(resident_name, year_month):
         event, values = window.read()
         if event == sg.WIN_CLOSED:
             break
+        elif event == 'Hide Buttons':
+            window['Save Changes Made'].update(visible=False)
+            window['Hide Buttons'].update(visible=False)
+        elif event == 'Save Changes Made':
+            save_adl_chart_data(resident_name,year_month, values)
+            sg.popup("Changes Have Been Saved to Database")
 
     window.close()
 

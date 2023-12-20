@@ -56,11 +56,12 @@ c.execute('''CREATE TABLE IF NOT EXISTS user_settings (
 conn.commit()
 
 
-# Function to get the user's saved theme
 def get_user_theme():
-    c.execute("SELECT setting_value FROM user_settings WHERE setting_name = 'theme'")
-    result = c.fetchone()
-    return result[0] if result else 'DarkBlue'  # Replace 'Default1' with your default theme
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT setting_value FROM user_settings WHERE setting_name = 'theme'")
+        result = cursor.fetchone()
+        return result[0] if result else 'DarkBlue'  # Replace 'DarkBlue' with your default theme
 
 
 # Function to save theme choice
@@ -89,16 +90,23 @@ def apply_user_theme():
 # Apply user theme at application startup
 apply_user_theme()
 
+
 def check_for_residents():
     """ Check if there are any residents in the database. """
-    c.execute('SELECT * FROM residents')
-    return c.fetchone() is not None
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM residents')
+        return cursor.fetchone() is not None
+
 
 
 def insert_resident(name, age, additional_info, self_care):
     """ Insert a new resident into the database. """
-    c.execute('INSERT INTO residents VALUES (?, ?, ?, ?)', (name, age, additional_info, self_care))
-    conn.commit()
+    with sqlite3.connect('resident_data.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO residents VALUES (?, ?, ?, ?)', (name, age, additional_info, self_care))
+        conn.commit()
+
 
 
 def enter_resident_info():
